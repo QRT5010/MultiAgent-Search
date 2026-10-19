@@ -25,7 +25,7 @@ sys.path.insert(0, str(project_root))
 
 # Import agent runner and monitor
 # 注意：agent.main_agent 导入时会初始化 main_agent，这可能需要几秒钟
-from agent.main_agent import run_deep_agent
+from agent.main_agent import run_deep_agent, get_main_agent
 from api.monitor import manager
 
 app = FastAPI(title="DeepAgents API")
@@ -76,6 +76,11 @@ async def startup_event():
     loop = asyncio.get_running_loop()
     manager.set_loop(loop)
     print(f"[Server] WebSocket Manager bound to loop: {id(loop)}")
+
+    # 预热主智能体：异步 checkpointer 必须在事件循环内创建，
+    # 提前初始化可避免首个任务请求时等待（fail-fast：启动即暴露问题）
+    await get_main_agent()
+    print("[Server] main_agent 预热完成")
 
 
 @app.post("/api/task")
